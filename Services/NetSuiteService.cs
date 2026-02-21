@@ -187,96 +187,13 @@ public class NetSuiteService
         return await GetAccessTokenAsync();
     }
 
-    public async Task<List<CategoryDto>> GetCategoriesAsync()
+    public async Task<List<SuiteQlCategoryRow>> GetCategoriesAsync()
     {
         return await _cache.GetOrCreateAsync("netsuite_navigation_categories", async entry =>
         {
             entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
 
-            var rows = await GetCommerceCategoriesAsync();
-            return TransformToAngularModel(rows);
-        }) ?? new List<CategoryDto>();
-    }
-
-    private string CleanName(string input)
-    {
-        return input
-            .Replace("\\\"", "")
-            .Replace("\"", "")
-            .Trim();
-    }
-
-    private string? BuildImageUrl(string? thumbnailId)
-    {
-        if (string.IsNullOrEmpty(thumbnailId))
-            return null;
-
-        var accountUpper = _config.AccountId.ToUpper();
-
-        return $"https://{_config.AccountId.ToLower()}.app.netsuite.com/core/media/media.nl?id={thumbnailId}&c={accountUpper}";
-    }
-
-    private List<CategoryDto> TransformToAngularModel(List<SuiteQlCategoryRow> rows)
-    {
-        var lookup = rows.ToDictionary(
-            r => r.Id,
-            r =>
-            {
-                var cleanedName = CleanName(r.Name);
-
-                return new CategoryDto
-                {
-                    Id = GenerateSlug(cleanedName),
-                    Name = cleanedName,
-                    Slug = r.UrlFragment ?? GenerateSlug(cleanedName),
-                    Image = r.ImageUrl != null
-                        ? $"https://{_config.AccountId.ToLower()}.app.netsuite.com{r.ImageUrl}"
-                        : null
-                };
-            });
-
-        foreach (var row in rows)
-        {
-            if (!string.IsNullOrEmpty(row.PrimaryParent) &&
-                lookup.ContainsKey(row.PrimaryParent))
-            {
-                lookup[row.PrimaryParent]
-                    .SubCategories
-                    .Add(lookup[row.Id]);
-            }
-        }
-
-        var roots = rows
-            .Where(r => string.IsNullOrEmpty(r.PrimaryParent))
-            .Select(r => lookup[r.Id])
-            .ToList();
-
-        foreach (var root in roots)
-        {
-            BuildUrls(root, null);
-        }
-
-        return roots;
-    }
-
-    private void BuildUrls(CategoryDto node, string? parentUrl)
-    {
-        node.Url = parentUrl == null
-            ? $"/{node.Slug}"
-            : $"{parentUrl}/{node.Slug}";
-
-        foreach (var child in node.SubCategories)
-        {
-            BuildUrls(child, node.Url);
-        }
-    }
-
-    private string GenerateSlug(string input)
-    {
-        return input
-            .ToLowerInvariant()
-            .Replace("&", "and")
-            .Replace(" ", "-")
-            .Replace("_", "-");
+            return await GetCommerceCategoriesAsync();
+        }) ?? new List<SuiteQlCategoryRow>();
     }
 }
