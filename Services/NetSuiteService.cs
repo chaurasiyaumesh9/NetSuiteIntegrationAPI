@@ -111,6 +111,11 @@ public class NetSuiteService
 
         var json = JsonSerializer.Deserialize<NsToken>(content);
 
+        if (json == null || string.IsNullOrWhiteSpace(json.AccessToken))
+        {
+            throw new Exception("Failed to deserialize NetSuite token response.");
+        }
+
         _accessToken = json.AccessToken;
         _tokenExpiry = DateTime.UtcNow.AddSeconds(json.ExpiresIn - 60);
 
