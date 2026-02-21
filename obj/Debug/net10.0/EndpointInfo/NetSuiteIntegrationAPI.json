@@ -1,0 +1,39 @@
+{
+  "openapi": "3.0.4",
+  "info": {
+    "title": "NetSuiteIntegrationAPI",
+    "version": "1.0"
+  },
+  "paths": {
+    "/api/netsuite/test-token": {
+      "get": {
+        "tags": [
+          "NetSuite"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    },
+    "/api/netsuite/categories": {
+      "get": {
+        "tags": [
+          "NetSuite"
+        ],
+        "responses": {
+          "200": {
+            "description": "OK"
+          }
+        }
+      }
+    }
+  },
+  "components": { },
+  "tags": [
+    {
+      "name": "NetSuite"
+    }
+  ]
+}

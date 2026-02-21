@@ -1,0 +1,6 @@
+@NetSuiteIntegrationAPI_HostAddress = http://localhost:5102
+
+GET {{NetSuiteIntegrationAPI_HostAddress}}/weatherforecast/
+Accept: application/json
+
+###

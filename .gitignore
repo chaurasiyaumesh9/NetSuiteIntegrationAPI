@@ -1,0 +1,3 @@
+*.pem
+Security/
+appsettings.Development.json
