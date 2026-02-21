@@ -151,6 +151,7 @@ public class NetSuiteService
                 ON c.thumbnail = f.id
             WHERE c.isinactive = 'F'
               AND c.displayinsite = 'T'
+                AND c.custrecord_headless_commerce_category = 'T'
         "
         };
 
