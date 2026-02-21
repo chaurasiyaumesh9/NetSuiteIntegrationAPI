@@ -44,7 +44,9 @@ public class NetSuiteService
     {
         var now = DateTime.UtcNow;
 
-        var privateKeyPem = _config.PrivateKey;
+        var privateKeyPem = _config.PrivateKey?
+        .Replace("\\n", "\n")
+        .Trim();
 
         if (string.IsNullOrWhiteSpace(privateKeyPem))
             throw new Exception("NetSuite PrivateKey is not configured.");
