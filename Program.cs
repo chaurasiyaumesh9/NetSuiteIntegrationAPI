@@ -6,6 +6,14 @@ builder.Services.Configure<NetSuiteOptions>(
     builder.Configuration.GetSection("NetSuite")
 );
 
+//Console.WriteLine($"Environment: {builder.Configuration["NetSuite:PrivateKey"]}");
+
+//Console.WriteLine("---- CONFIG TEST ----");
+//Console.WriteLine($"AccountId: {builder.Configuration["NetSuite:AccountId"]}");
+//Console.WriteLine($"ClientId: {builder.Configuration["NetSuite:ClientId"]}");
+//Console.WriteLine($"PrivateKey length: {builder.Configuration["NetSuite:PrivateKey"]?.Length}");
+//Console.WriteLine("----------------------");
+
 // Add services to the container.
 
 builder.Services.AddControllers();
