@@ -38,4 +38,18 @@ public class NetSuiteController : ControllerBase
             return StatusCode(500, ex.Message);
         }
     }
+
+    [HttpGet("categories/{id}/items")]
+    public async Task<IActionResult> GetCategoryItems(string id)
+    {
+        try
+        {
+            var items = await _netSuiteService.GetCategoryItemsAsync(id);
+            return Ok(items);
+        }
+        catch (Exception ex)
+        {
+            return StatusCode(500, ex.Message);
+        }
+    }
 }

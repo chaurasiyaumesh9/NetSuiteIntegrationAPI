@@ -12,7 +12,6 @@ public class NetSuiteService
 {
     private readonly NetSuiteOptions _config;
     private readonly IHttpClientFactory _httpClientFactory;
-
     private string? _accessToken;
     private DateTime _tokenExpiry;
     private readonly IMemoryCache _cache;
@@ -28,18 +27,10 @@ public class NetSuiteService
     }
 
     private string Account => _config.AccountId.ToLower().Replace("_", "-");
-
     private string ClientId => _config.ClientId;
-
     private string CertificateId => _config.CertificateId;
-
     private string TokenEndpoint => $"https://{Account}.suitetalk.api.netsuite.com/services/rest/auth/oauth2/v1/token";
-
-    private string RestBaseUrl => $"https://{Account}.suitetalk.api.netsuite.com/services/rest";
-
-    // ==========================================================
-    // Generate Client Assertion (JWT)
-    // ==========================================================
+    
     private string GenerateClientAssertion()
     {
         var now = DateTime.UtcNow;
@@ -85,9 +76,6 @@ public class NetSuiteService
         return jwt;
     }
 
-    // ==========================================================
-    // Get OAuth Access Token
-    // ==========================================================
     private async Task<string> GetAccessTokenAsync()
     {
         if (_accessToken != null && DateTime.UtcNow < _tokenExpiry)
@@ -124,47 +112,35 @@ public class NetSuiteService
         return _accessToken;
     }
 
-    // ==========================================================
-    // Commerce Categories
-    // ==========================================================
-    public async Task<List<SuiteQlCategoryRow>> GetCommerceCategoriesAsync()
+    public async Task<string> GetAccessTokenForTestAsync()
+    {
+        return await GetAccessTokenAsync();
+    }
+
+    public async Task<CategoriesResponse> GetCategoriesAsync()
+    {
+        return await _cache.GetOrCreateAsync(
+            "netsuite_navigation_categories",
+            async entry =>
+            {
+                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
+                return await GetCommerceCategoriesAsync();
+            }
+        ) ?? new CategoriesResponse();
+    }
+
+    public async Task<CategoriesResponse> GetCommerceCategoriesAsync()
     {
         var token = await GetAccessTokenAsync();
         var client = _httpClientFactory.CreateClient();
 
-        var request = new HttpRequestMessage(
-            HttpMethod.Post,
-            $"{RestBaseUrl}/query/v1/suiteql"
-        );
+        var url = $"https://{Account}.restlets.api.netsuite.com/app/site/hosting/restlet.nl" +
+                  $"?script=customscript_restlet_categories" +
+                  $"&deploy=customdeploy_restlet_categories";
 
-        var queryObject = new
-        {
-            q = @"
-            SELECT
-                c.id,
-                c.name,
-                c.primaryparent,
-                c.urlfragment,
-                f.url AS imageurl
-            FROM CommerceCategory c
-            LEFT JOIN File f
-                ON c.thumbnail = f.id
-            WHERE c.isinactive = 'F'
-              AND c.displayinsite = 'T'
-                AND c.custrecord_headless_commerce_category = 'T'
-        "
-        };
-
-        request.Content = new StringContent(
-            JsonSerializer.Serialize(queryObject),
-            Encoding.UTF8,
-            "application/json"
-        );
-
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Authorization =
             new AuthenticationHeaderValue("Bearer", token);
-
-        request.Headers.Add("Prefer", "transient");
 
         var response = await client.SendAsync(request);
         var content = await response.Content.ReadAsStringAsync();
@@ -172,29 +148,57 @@ public class NetSuiteService
         if (!response.IsSuccessStatusCode)
             throw new Exception($"NetSuite API Error: {content}");
 
-        var result = JsonSerializer.Deserialize<SuiteQlResult<SuiteQlCategoryRow>>(
+        var result = JsonSerializer.Deserialize<CategoriesResponse>(
             content,
             new JsonSerializerOptions
             {
                 PropertyNameCaseInsensitive = true
             });
 
-        return result?.Items ?? new List<SuiteQlCategoryRow>();
+        return result ?? new CategoriesResponse();
     }
 
-    // For testing only
-    public async Task<string> GetAccessTokenForTestAsync()
+    public async Task<CategoryItemsResponse> GetCategoryItemsAsync(string categoryId)
     {
-        return await GetAccessTokenAsync();
+        return await _cache.GetOrCreateAsync(
+            $"netsuite_category_items_{categoryId}",
+            async entry =>
+            {
+                entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
+                return await GetCategoryItemsByIdAsync(categoryId);
+            }
+        ) ?? new CategoryItemsResponse();
     }
 
-    public async Task<List<SuiteQlCategoryRow>> GetCategoriesAsync()
+    public async Task<CategoryItemsResponse> GetCategoryItemsByIdAsync(string categoryId)
     {
-        return await _cache.GetOrCreateAsync("netsuite_navigation_categories", async entry =>
-        {
-            entry.AbsoluteExpirationRelativeToNow = TimeSpan.FromMinutes(10);
+        var token = await GetAccessTokenAsync();
+        var client = _httpClientFactory.CreateClient();
 
-            return await GetCommerceCategoriesAsync();
-        }) ?? new List<SuiteQlCategoryRow>();
+        var url = $"https://{Account}.restlets.api.netsuite.com/app/site/hosting/restlet.nl" +
+                  $"?script=2100" +
+                  $"&deploy=1" +
+                  $"&categoryId={categoryId}" +
+                  $"&pageIndex=0" +
+                  $"&pageSize=100";
+
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Authorization =
+            new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await client.SendAsync(request);
+        var content = await response.Content.ReadAsStringAsync();
+
+        if (!response.IsSuccessStatusCode)
+            throw new Exception($"NetSuite API Error: {content}");
+
+        var result = JsonSerializer.Deserialize<CategoryItemsResponse>(
+            content,
+            new JsonSerializerOptions
+            {
+                PropertyNameCaseInsensitive = true
+            });
+
+        return result ?? new CategoryItemsResponse();
     }
 }
