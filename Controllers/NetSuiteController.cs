@@ -52,4 +52,22 @@ public class NetSuiteController : ControllerBase
             return StatusCode(500, ex.Message);
         }
     }
+
+    [HttpGet("products/export")]
+    public async Task<IActionResult> ExportProducts(
+    [FromQuery] int pageIndex = 0,
+    [FromQuery] int pageSize = 50)
+    {
+        try
+        {
+            var result = await _netSuiteService
+                .GetProductsForIndexingAsync(pageIndex, pageSize);
+
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
 }

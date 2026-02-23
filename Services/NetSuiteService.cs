@@ -4,7 +4,6 @@ using NetSuiteIntegrationAPI.Models;
 using System.IdentityModel.Tokens.Jwt;
 using System.Net.Http.Headers;
 using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Caching.Memory;
 
@@ -30,7 +29,6 @@ public class NetSuiteService
     private string ClientId => _config.ClientId;
     private string CertificateId => _config.CertificateId;
     private string TokenEndpoint => $"https://{Account}.suitetalk.api.netsuite.com/services/rest/auth/oauth2/v1/token";
-    
     private string GenerateClientAssertion()
     {
         var now = DateTime.UtcNow;
@@ -180,7 +178,7 @@ public class NetSuiteService
                   $"&deploy=1" +
                   $"&categoryId={categoryId}" +
                   $"&pageIndex=0" +
-                  $"&pageSize=100";
+                  $"&pageSize=1000";
 
         var request = new HttpRequestMessage(HttpMethod.Get, url);
         request.Headers.Authorization =
@@ -200,5 +198,31 @@ public class NetSuiteService
             });
 
         return result ?? new CategoryItemsResponse();
+    }
+
+    public async Task<BulkProductResponse> GetProductsForIndexingAsync(int pageIndex, int pageSize)
+    {
+        var token = await GetAccessTokenAsync();
+        var client = _httpClientFactory.CreateClient();
+
+        var url = $"https://{Account}.restlets.api.netsuite.com/app/site/hosting/restlet.nl" +
+                  $"?script=2102" +
+                  $"&deploy=1" +
+                  $"&pageIndex={pageIndex}" +
+                  $"&pageSize={pageSize}";
+
+        var request = new HttpRequestMessage(HttpMethod.Get, url);
+        request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", token);
+
+        var response = await client.SendAsync(request);
+        var content = await response.Content.ReadAsStringAsync();
+
+        if (!response.IsSuccessStatusCode)
+            throw new Exception($"NetSuite API Error: {content}");
+
+        return JsonSerializer.Deserialize<BulkProductResponse>(
+            content,
+            new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
+        )!;
     }
 }

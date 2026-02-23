@@ -23,6 +23,7 @@ builder.Services.AddSwaggerGen();
 builder.Services.AddHttpClient();
 builder.Services.AddMemoryCache();
 builder.Services.AddScoped<NetSuiteService>();
+builder.Services.AddScoped<TypesenseService>();
 
 builder.Services.AddCors(options =>
 {

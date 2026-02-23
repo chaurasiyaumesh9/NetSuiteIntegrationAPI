@@ -8,6 +8,8 @@ namespace NetSuiteIntegrationAPI.Models
         public string ClientId { get; set; } = string.Empty;
         public string PrivateKey { get; set; } = string.Empty;
         public string CertificateId { get; set; } = string.Empty;
+        public string TYPESENSE_ADMIN_KEY { get; set; } = string.Empty;
+        public string TYPESENSE_BASE_URL { get; set; } = string.Empty;
     }
 
     public class NsToken
@@ -55,5 +57,36 @@ namespace NetSuiteIntegrationAPI.Models
         public string Price { get; set; } = default!;
         public string ImageUrl { get; set; } = default!;
         public string QuantityAvailable { get; set; } = default!;
+    }
+
+    public class ProductDto
+    {
+        public string Id { get; set; } = string.Empty;
+        public string Sku { get; set; } = string.Empty;
+        public string Name { get; set; } = string.Empty;
+        public string Description { get; set; } = string.Empty;
+
+        public List<string> CategoryIds { get; set; } = new();
+
+        public double Price { get; set; }
+
+        public int QuantityAvailable { get; set; }
+
+        public string ImageUrl { get; set; } = string.Empty;
+
+        public string? LastModifiedDate { get; set; }
+    }
+
+    public class BulkProductResponse
+    {
+        public bool Success { get; set; }
+
+        public int TotalResults { get; set; }
+
+        public int PageIndex { get; set; }
+
+        public int PageSize { get; set; }
+
+        public List<ProductDto> Items { get; set; } = new();
     }
 }
