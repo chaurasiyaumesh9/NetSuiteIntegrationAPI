@@ -17,7 +17,7 @@ public class TypesenseService
 
     private string TypesensBaseUrl => _config.TYPESENSE_BASE_URL;
     private string TypesenseAdminKey => _config.TYPESENSE_ADMIN_KEY;
-    
+
     public async Task<string> TypesenseHealthAsync()
     {
         var client = new HttpClient();
@@ -36,30 +36,62 @@ public class TypesenseService
 
     public async Task<string> GenerateProductSearchSchema()
     {
-        using var client = new HttpClient();
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Add("X-TYPESENSE-API-KEY", TypesenseAdminKey);
 
-        client.DefaultRequestHeaders.Add(
-            "X-TYPESENSE-API-KEY",
-            TypesenseAdminKey
+        // 1️⃣ Delete collection if exists
+        var deleteResponse = await client.DeleteAsync(
+            $"{TypesensBaseUrl}/collections/products"
         );
 
-        // Optional: delete existing collection for clean demo reset
-        await client.DeleteAsync($"{TypesensBaseUrl}/collections/products");
+        // Ignore 404 (collection not found)
+        if (!deleteResponse.IsSuccessStatusCode &&
+            deleteResponse.StatusCode != System.Net.HttpStatusCode.NotFound)
+        {
+            var error = await deleteResponse.Content.ReadAsStringAsync();
+            throw new Exception($"Failed to delete collection: {error}");
+        }
+
+        // 2️⃣ Recreate with new schema
+        return await CreateProductsCollectionAsync();
+    }
+
+    public async Task<string> CreateProductsCollectionAsync()
+    {
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Add("X-TYPESENSE-API-KEY", TypesenseAdminKey);
 
         var schema = new
         {
             name = "products",
-            fields = new List<TypesenseField>
-        {
-            new() { name = "id", type = "string" },
-            new() { name = "sku", type = "string" },
-            new() { name = "name", type = "string" },
-            new() { name = "description", type = "string" },
-            new() { name = "categoryIds", type = "string[]", facet = true },
-            new() { name = "price", type = "float", facet = true },
-            new() { name = "quantityAvailable", type = "int32" },
-            new() { name = "imageUrl", type = "string", optional = true }
-        },
+            fields = new object[]
+            {
+            new { name = "id", type = "string" },
+            new { name = "sku", type = "string" },
+            new { name = "name", type = "string", infix = true },
+            new { name = "description", type = "string", infix = true },
+
+            new { name = "categoryIds", type = "string[]", facet = true },
+
+            new { name = "price", type = "float", facet = true },
+            new { name = "quantityAvailable", type = "int32" },
+            new { name = "imageUrl", type = "string", optional = true },
+            new { name = "lastModifiedDate", type = "string", optional = true },
+
+            // 🔥 NEW FIELDS
+
+            new { name = "brand", type = "string", facet = true , optional = true},
+            new { name = "storageCapacity", type = "float", facet = true , optional = true},
+            new { name = "memoryRam", type = "float", facet = true , optional = true},
+            new { name = "screenSize", type = "float", facet = true , optional = true},
+
+            new { name = "processorModel", type = "string", infix = true , optional = true},
+            new { name = "color", type = "string", facet = true , optional = true},
+            new { name = "networkType", type = "string", facet = true , optional = true},
+
+            new { name = "featured", type = "bool", facet = true, optional = true},
+            new { name = "customerRating", type = "float", facet = true, optional = true }
+            },
             default_sorting_field = "price"
         };
 
@@ -68,9 +100,14 @@ public class TypesenseService
             schema
         );
 
-        return await response.Content.ReadAsStringAsync();
-    }
+        var content = await response.Content.ReadAsStringAsync();
 
+        if (!response.IsSuccessStatusCode)
+            throw new Exception(content);
+
+        return content;
+    }
+        
     public async Task<string> SyncProducts(int pageIndex, int pageSize)
     {
         var client = new HttpClient();
@@ -92,12 +129,24 @@ public class TypesenseService
                 id = product.Id,
                 sku = product.Sku,
                 name = product.Name,
-                description = product.Description ?? "",
+                description = product.Description,
+                categoryIds = product.CategoryIds ?? new List<string>(),
                 price = product.Price,
                 quantityAvailable = product.QuantityAvailable,
                 imageUrl = product.ImageUrl ?? "",
-                categoryIds = product.CategoryIds ?? new List<string>(),
-                lastModifiedDate = product.LastModifiedDate
+                lastModifiedDate = product.LastModifiedDate,
+
+                // 🔥 THESE MUST EXIST
+
+                brand = product.Brand ?? "",
+                storageCapacity = product.StorageCapacity,
+                memoryRam = product.MemoryRam,
+                screenSize = product.ScreenSize,
+                processorModel = product.ProcessorModel ?? "",
+                color = product.Color ?? "",
+                networkType = product.NetworkType ?? "",
+                featured = product.Featured,
+                customerRating = product.CustomerRating
             };
 
             var json = JsonSerializer.Serialize(document);
@@ -141,14 +190,14 @@ public class TypesenseService
         client.DefaultRequestHeaders.Add("X-TYPESENSE-API-KEY", TypesenseAdminKey);
 
         var searchParams = new List<string>
-    {
-        $"q={Uri.EscapeDataString(query ?? "*")}",
-        "query_by=name,description,sku",
-        $"page={page}",
-        $"per_page={pageSize}",
-        "facet_by=categoryIds",
-        "max_facet_values=20"
-    };
+        {
+            $"q={Uri.EscapeDataString(query ?? "*")}",
+            "query_by=name,description,sku",
+            $"page={page}",
+            $"per_page={pageSize}",
+            "facet_by=categoryIds,brand,color,networkType,storageCapacity,memoryRam,screenSize,customerRating,featured",
+            "max_facet_values=20"
+        };
 
         var filters = new List<string>();
 

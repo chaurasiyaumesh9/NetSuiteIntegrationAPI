@@ -69,12 +69,25 @@ namespace NetSuiteIntegrationAPI.Models
         public List<string> CategoryIds { get; set; } = new();
 
         public double Price { get; set; }
-
         public int QuantityAvailable { get; set; }
-
         public string ImageUrl { get; set; } = string.Empty;
-
         public string? LastModifiedDate { get; set; }
+
+        // 🔥 New Fields
+
+        public string Brand { get; set; } = string.Empty;
+
+        public double StorageCapacity { get; set; }
+        public double MemoryRam { get; set; }
+        public double ScreenSize { get; set; }
+
+        public string ProcessorModel { get; set; } = string.Empty;
+        public string Color { get; set; } = string.Empty;
+        public string NetworkType { get; set; } = string.Empty;
+
+        public bool Featured { get; set; }
+
+        public double CustomerRating { get; set; }
     }
 
     public class BulkProductResponse

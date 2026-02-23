@@ -25,7 +25,7 @@ public class TypesenseController : ControllerBase
         }
     }
 
-    [HttpPost("collections/products/schema")]
+    [HttpPost("collections/products/reset")]
     public async Task<IActionResult> GenerateProductSearchSchema()
     {
         try
