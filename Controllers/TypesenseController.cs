@@ -25,7 +25,7 @@ public class TypesenseController : ControllerBase
         }
     }
 
-    [HttpPost("collections/products/reset")]
+    [HttpPost("products/reset")]
     public async Task<IActionResult> GenerateProductSearchSchema()
     {
         try
@@ -45,6 +45,34 @@ public class TypesenseController : ControllerBase
         try
         {
             var result = await _typesenseService.SyncProducts(pageIndex, pageSize);
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpPost("categories/reset")]
+    public async Task<IActionResult> GenerateCategorySearchSchema()
+    {
+        try
+        {
+            var result = await _typesenseService.GenerateCategorySearchSchema();
+            return Ok(result);
+        }
+        catch (Exception ex)
+        {
+            return BadRequest(ex.Message);
+        }
+    }
+
+    [HttpPost("categories/sync")]
+    public async Task<IActionResult> SyncCategories(int pageIndex = 0, int pageSize = 500)
+    {
+        try
+        {
+            var result = await _typesenseService.SyncCategories(pageIndex, pageSize);
             return Ok(result);
         }
         catch (Exception ex)

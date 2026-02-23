@@ -34,6 +34,108 @@ public class TypesenseService
         return content;
     }
 
+    public async Task<string> GenerateCategorySearchSchema()
+    {
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Add("X-TYPESENSE-API-KEY", TypesenseAdminKey);
+
+        // Delete existing collection if any
+        var deleteResponse = await client.DeleteAsync(
+            $"{TypesensBaseUrl}/collections/categories"
+        );
+
+        if (!deleteResponse.IsSuccessStatusCode &&
+            deleteResponse.StatusCode != System.Net.HttpStatusCode.NotFound)
+        {
+            var error = await deleteResponse.Content.ReadAsStringAsync();
+            throw new Exception($"Failed to delete categories collection: {error}");
+        }
+
+        return await CreateCategoriesCollectionAsync();
+    }
+
+    public async Task<string> CreateCategoriesCollectionAsync()
+    {
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Add("X-TYPESENSE-API-KEY", TypesenseAdminKey);
+
+        var schema = new
+        {
+            name = "categories",
+            fields = new object[]
+            {
+                new { name = "id", type = "string" },
+                new { name = "name", type = "string", infix = true },
+                new { name = "primaryParent", type = "string", optional = true },
+                new { name = "urlFragment", type = "string", optional = true },
+                new { name = "thumbnail", type = "string", optional = true },
+                new { name = "featured", type = "bool", facet = true, optional = true }
+            }
+        };
+
+        var response = await client.PostAsJsonAsync(
+            $"{TypesensBaseUrl}/collections",
+            schema
+        );
+
+        var content = await response.Content.ReadAsStringAsync();
+
+        if (!response.IsSuccessStatusCode)
+            throw new Exception(content);
+
+        return content;
+    }
+
+    public async Task<string> SyncCategories(int pageIndex, int pageSize)
+    {
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Add("X-TYPESENSE-API-KEY", TypesenseAdminKey);
+
+        var exportResult = await _netSuiteService.GetCategoriesAsync();
+
+        if (exportResult?.Items == null || !exportResult.Items.Any())
+            return "No categories to index.";
+
+        var ndjson = new StringBuilder();
+
+        foreach (var category in exportResult.Items)
+        {
+            var document = new
+            {
+                id = category.Id,
+                name = category.Name,
+                primaryParent = category.PrimaryParent ?? "",
+                urlFragment = category.UrlFragment ?? "",
+                thumbnail = category.Thumbnail ?? "",
+                featured = category.Featured
+            };
+
+            var json = JsonSerializer.Serialize(document);
+            ndjson.AppendLine(json);
+        }
+
+        var request = new HttpRequestMessage(
+            HttpMethod.Post,
+            $"{TypesensBaseUrl}/collections/categories/documents/import?action=upsert"
+        );
+
+        request.Headers.Add("X-TYPESENSE-API-KEY", TypesenseAdminKey);
+
+        request.Content = new StringContent(
+            ndjson.ToString(),
+            Encoding.UTF8,
+            "text/plain"
+        );
+
+        var response = await client.SendAsync(request);
+        var content = await response.Content.ReadAsStringAsync();
+
+        if (!response.IsSuccessStatusCode)
+            throw new Exception($"Typesense Error: {content}");
+
+        return content;
+    }
+
     public async Task<string> GenerateProductSearchSchema()
     {
         var client = new HttpClient();
@@ -184,7 +286,7 @@ public class TypesenseService
         double? minPrice,
         double? maxPrice,
         string? sort
-)
+    )
     {
         var client = new HttpClient();
         client.DefaultRequestHeaders.Add("X-TYPESENSE-API-KEY", TypesenseAdminKey);
@@ -254,6 +356,80 @@ public class TypesenseService
         };
 
         return cleanResponse;
+    }
+
+    public async Task<List<CategoryDto>> GetAllCategoriesAsync()
+    {
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Add("X-TYPESENSE-API-KEY", TypesenseAdminKey);
+
+        var url = $"{TypesensBaseUrl}/collections/categories/documents/search?q={Uri.EscapeDataString("*")}&query_by=name&per_page=200";
+
+        var response = await client.GetAsync(url);
+        var content = await response.Content.ReadAsStringAsync();
+
+        if (!response.IsSuccessStatusCode)
+            throw new Exception($"Typesense Search Error: {content}");
+
+        using var doc = JsonDocument.Parse(content);
+        var root = doc.RootElement;
+
+        var results = new List<CategoryDto>();
+
+        if (root.TryGetProperty("hits", out var hits) && hits.ValueKind == JsonValueKind.Array)
+        {
+            foreach (var hit in hits.EnumerateArray())
+            {
+                if (hit.TryGetProperty("document", out var document))
+                {
+                    var cat = new CategoryDto
+                    {
+                        Id = document.GetProperty("id").GetString() ?? string.Empty,
+                        Name = document.GetProperty("name").GetString() ?? string.Empty,
+                        PrimaryParent = document.TryGetProperty("primaryParent", out var pp) ? pp.GetString() ?? string.Empty : string.Empty,
+                        UrlFragment = document.TryGetProperty("urlFragment", out var uf) ? uf.GetString() ?? string.Empty : string.Empty,
+                        Thumbnail = document.TryGetProperty("thumbnail", out var th) ? th.GetString() ?? string.Empty : string.Empty,
+                        Featured = document.TryGetProperty("featured", out var ft) && ft.ValueKind == JsonValueKind.True
+                    };
+
+                    results.Add(cat);
+                }
+            }
+        }
+
+        return results;
+    }
+
+    public async Task<CategoryDto?> GetCategoryByIdAsync(string id)
+    {
+        var client = new HttpClient();
+        client.DefaultRequestHeaders.Add("X-TYPESENSE-API-KEY", TypesenseAdminKey);
+
+        var url = $"{TypesensBaseUrl}/collections/categories/documents/{Uri.EscapeDataString(id)}";
+
+        var response = await client.GetAsync(url);
+        var content = await response.Content.ReadAsStringAsync();
+
+        if (response.StatusCode == System.Net.HttpStatusCode.NotFound)
+            return null;
+
+        if (!response.IsSuccessStatusCode)
+            throw new Exception($"Typesense Error: {content}");
+
+        using var doc = JsonDocument.Parse(content);
+        var root = doc.RootElement;
+
+        var cat = new CategoryDto
+        {
+            Id = root.GetProperty("id").GetString() ?? string.Empty,
+            Name = root.GetProperty("name").GetString() ?? string.Empty,
+            PrimaryParent = root.TryGetProperty("primaryParent", out var pp) ? pp.GetString() ?? string.Empty : string.Empty,
+            UrlFragment = root.TryGetProperty("urlFragment", out var uf) ? uf.GetString() ?? string.Empty : string.Empty,
+            Thumbnail = root.TryGetProperty("thumbnail", out var th) ? th.GetString() ?? string.Empty : string.Empty,
+            Featured = root.TryGetProperty("featured", out var ft) && ft.ValueKind == JsonValueKind.True
+        };
+
+        return cat;
     }
 
 }

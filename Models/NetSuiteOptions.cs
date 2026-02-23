@@ -35,7 +35,8 @@ namespace NetSuiteIntegrationAPI.Models
         public string Name { get; set; } = default!;
         public string PrimaryParent { get; set; } = default!;
         public string UrlFragment { get; set; } = default!;
-        public string Thumbnail { get; set; } = default!;
+        public string Thumbnail { get; set; } = default!; 
+        public bool Featured { get; set; }
     }
 
     public class CategoryItemsResponse
