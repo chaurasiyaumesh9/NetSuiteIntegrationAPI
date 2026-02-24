@@ -22,7 +22,7 @@ define(['N/search'], function (search) {
                 'primaryparent',
                 'urlfragment',
                 'custrecord_featured_category',
-                'thumbnail'
+                'thumbnailurl'
             ]
         });
 
@@ -36,7 +36,7 @@ define(['N/search'], function (search) {
                 primaryParent: result.getValue('primaryparent'),
                 urlFragment: result.getValue('urlfragment'),
                 featured: result.getValue('custrecord_featured_category'),
-                thumbnail: result.getValue('thumbnail')
+                thumbnail: result.getValue('thumbnailurl')
             });
 
             return true;
