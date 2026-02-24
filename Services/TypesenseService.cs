@@ -278,46 +278,107 @@ public class TypesenseService
         return content;
     }
 
-    public async Task<ProductSearchResponse> SearchProducts(
-        string? query,
-        int page,
-        int pageSize,
-        string? categoryId,
-        double? minPrice,
-        double? maxPrice,
-        string? sort
-    )
+    private static string BuildFilterExpression(IDictionary<string, string>? filters)
     {
-        var client = new HttpClient();
+        if (filters == null || !filters.Any())
+            return string.Empty;
+
+        var expressions = new List<string>();
+
+        foreach (var kvp in filters)
+        {
+            var field = kvp.Key;
+            var rawValue = kvp.Value;
+
+            if (string.IsNullOrWhiteSpace(rawValue))
+                continue;
+
+            var tokens = rawValue.Split(',', StringSplitOptions.RemoveEmptyEntries)
+                                 .Select(t => t.Trim())
+                                 .Where(t => !string.IsNullOrWhiteSpace(t))
+                                 .ToList();
+
+            if (!tokens.Any())
+                continue;
+
+            // Detect boolean
+            if (tokens.Count == 1 && bool.TryParse(tokens[0], out _))
+            {
+                expressions.Add($"{field}:={tokens[0].ToLower()}");
+                continue;
+            }
+
+            // Detect numeric or numeric range
+            bool isNumericOrRange = tokens.All(t =>
+                t.Contains('-')
+                    ? t.Split('-', StringSplitOptions.RemoveEmptyEntries)
+                       .All(p => double.TryParse(p, out _))
+                    : double.TryParse(t, out _)
+            );
+
+            if (isNumericOrRange)
+            {
+                // Single range like 10-20
+                if (tokens.Count == 1 && tokens[0].Contains('-'))
+                {
+                    var parts = tokens[0].Split('-', StringSplitOptions.RemoveEmptyEntries);
+                    if (parts.Length == 2)
+                    {
+                        expressions.Add($"{field}:=[{parts[0]},{parts[1]}]");
+                        continue;
+                    }
+                }
+
+                // Single numeric
+                if (tokens.Count == 1)
+                    expressions.Add($"{field}:={tokens[0]}");
+                else
+                    expressions.Add($"{field}:=[{string.Join(",", tokens)}]");
+
+                continue;
+            }
+
+            // Otherwise treat as string facet
+            if (tokens.Count == 1)
+                expressions.Add($"{field}:={tokens[0]}");
+            else
+                expressions.Add($"{field}:=[{string.Join(",", tokens)}]");
+        }
+
+        return string.Join(" && ", expressions);
+    }
+
+    public async Task<ProductSearchResponse> SearchProducts(
+    string? query,
+    int page,
+    int pageSize,
+    IDictionary<string, string>? filters = null,
+    string? sort = null
+)
+    {
+        using var client = new HttpClient();
         client.DefaultRequestHeaders.Add("X-TYPESENSE-API-KEY", TypesenseAdminKey);
 
         var searchParams = new List<string>
-        {
-            $"q={Uri.EscapeDataString(query ?? "*")}",
-            "query_by=name,description,sku",
-            $"page={page}",
-            $"per_page={pageSize}",
-            "facet_by=categoryIds,brand,color,networkType,storageCapacity,memoryRam,screenSize,customerRating,featured",
-            "max_facet_values=20"
-        };
+    {
+        $"q={Uri.EscapeDataString(query ?? "*")}",
+        "query_by=name,description,sku",
+        $"page={page}",
+        $"per_page={pageSize}",
+        "facet_by=categoryIds,brand,color,networkType,storageCapacity,memoryRam,screenSize,customerRating,featured",
+        "max_facet_values=20"
+    };
 
-        var filters = new List<string>();
+        var filterExpression = BuildFilterExpression(filters);
 
-        if (!string.IsNullOrEmpty(categoryId))
-            filters.Add($"categoryIds:={categoryId}");
-
-        if (minPrice.HasValue && maxPrice.HasValue)
-            filters.Add($"price:=[{minPrice},{maxPrice}]");
-
-        if (filters.Any())
-            searchParams.Add($"filter_by={string.Join(" && ", filters)}");
+        if (!string.IsNullOrEmpty(filterExpression))
+            searchParams.Add($"filter_by={filterExpression}");
 
         searchParams.Add(!string.IsNullOrEmpty(sort)
             ? $"sort_by={sort}"
             : "sort_by=price:asc");
 
-        var url =
-            $"{TypesensBaseUrl}/collections/products/documents/search?{string.Join("&", searchParams)}";
+        var url = $"{TypesensBaseUrl}/collections/products/documents/search?{string.Join("&", searchParams)}";
 
         var response = await client.GetAsync(url);
         var content = await response.Content.ReadAsStringAsync();
@@ -328,21 +389,14 @@ public class TypesenseService
         var typesenseResult = JsonSerializer.Deserialize<TypesenseSearchResult>(
             content,
             new JsonSerializerOptions { PropertyNameCaseInsensitive = true }
-        );
+        ) ?? throw new Exception("Failed to parse Typesense response.");
 
-        if (typesenseResult == null)
-            throw new Exception("Failed to parse Typesense response.");
-
-        // 🔥 Transform to Clean API Response
-
-        var cleanResponse = new ProductSearchResponse
+        return new ProductSearchResponse
         {
             Total = typesenseResult.Found,
             Page = page,
             PageSize = pageSize,
-            Items = typesenseResult.Hits
-                .Select(h => h.Document)
-                .ToList(),
+            Items = typesenseResult.Hits.Select(h => h.Document).ToList(),
             Facets = typesenseResult.Facet_Counts?
                 .Select(f => new FacetDto
                 {
@@ -354,8 +408,6 @@ public class TypesenseService
                     }).ToList()
                 }).ToList() ?? new List<FacetDto>()
         };
-
-        return cleanResponse;
     }
 
     public async Task<List<CategoryDto>> GetAllCategoriesAsync()

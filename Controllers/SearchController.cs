@@ -1,4 +1,5 @@
 ﻿using Microsoft.AspNetCore.Mvc;
+using NetSuiteIntegrationAPI.Models;
 
 [ApiController]
 [Route("api/search")]
@@ -12,18 +13,24 @@ public class SearchController : ControllerBase
     }
 
     [HttpGet("products")]
-    public async Task<IActionResult> SearchProducts(
-        string? q,
-        int page = 1,
-        int pageSize = 12,
-        string? categoryId = null,
-        double? minPrice = null,
-        double? maxPrice = null,
-        string? sort = null
-    )
+    public async Task<IActionResult> SearchProducts([FromQuery] ProductSearchQuery query)
     {
+        var reservedKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+    {
+        "q", "page", "pageSize", "sort"
+    };
+
+        var filters = Request.Query
+            .Where(kvp => !reservedKeys.Contains(kvp.Key))
+            .ToDictionary(kvp => kvp.Key, kvp => kvp.Value.ToString());
+
         var result = await _typesenseService.SearchProducts(
-            q, page, pageSize, categoryId, minPrice, maxPrice, sort);
+            query.Q,
+            query.Page,
+            query.PageSize,
+            filters,
+            query.Sort
+        );
 
         return Ok(result);
     }

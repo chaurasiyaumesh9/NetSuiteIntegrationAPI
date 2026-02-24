@@ -119,7 +119,7 @@ define(['N/search'], function (search) {
                     processorModel: result.getValue({ name: "custitem_processor_model", summary: search.Summary.MAX }) || "",
                     color: result.getValue({ name: "custitem_color_headless", summary: search.Summary.MAX }) || "",
                     networkType: result.getValue({ name: "custitem_network_type", summary: search.Summary.MAX }) || "",
-                    featured: result.getValue({ name: "custitem_featured_item", summary: search.Summary.MAX }) === "T",
+                    featured: result.getValue({ name: "custitem_featured_item", summary: search.Summary.MAX }),
                     customerRating: parseFloat(result.getValue({ name: "custitem_customer_rating", summary: search.Summary.MAX })) || 0
                 });
             });

@@ -38,4 +38,12 @@ namespace NetSuiteIntegrationAPI.Models
         public string Value { get; set; } = string.Empty;
         public int Count { get; set; }
     }
+
+    public class ProductSearchQuery
+    {
+        public string? Q { get; set; }
+        public int Page { get; set; } = 1;
+        public int PageSize { get; set; } = 12;
+        public string? Sort { get; set; }
+    }
 }
