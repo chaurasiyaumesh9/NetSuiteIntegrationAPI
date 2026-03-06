@@ -78,13 +78,14 @@ namespace NetSuiteIntegrationAPI.Models
 
         public string Brand { get; set; } = string.Empty;
 
-        public double StorageCapacity { get; set; }
-        public double MemoryRam { get; set; }
-        public double ScreenSize { get; set; }
-
-        public string ProcessorModel { get; set; } = string.Empty;
         public string Color { get; set; } = string.Empty;
-        public string NetworkType { get; set; } = string.Empty;
+
+        public string Size { get; set; } = string.Empty;
+        public string Material { get; set; } = string.Empty;
+
+        public string Style { get; set; } = string.Empty;
+
+        public string Gender { get; set; } = string.Empty;
 
         public bool Featured { get; set; }
 

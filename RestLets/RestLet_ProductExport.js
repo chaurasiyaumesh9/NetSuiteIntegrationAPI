@@ -49,12 +49,11 @@ define(['N/search'], function (search) {
 
                 // 🔥 NEW FIELDS
                 search.createColumn({ name: "custitem_brand", summary: search.Summary.MAX }),
-                search.createColumn({ name: "custitem_storage_capacity_gb", summary: search.Summary.MAX }),
-                search.createColumn({ name: "custitem_memory_ram_gb", summary: search.Summary.MAX }),
-                search.createColumn({ name: "custitem_screen_size_in", summary: search.Summary.MAX }),
-                search.createColumn({ name: "custitem_processor_model", summary: search.Summary.MAX }),
                 search.createColumn({ name: "custitem_color_headless", summary: search.Summary.MAX }),
-                search.createColumn({ name: "custitem_network_type", summary: search.Summary.MAX }),
+                search.createColumn({ name: "custitem_size_headless", summary: search.Summary.MAX }),
+                search.createColumn({ name: "custitem_material_headless", summary: search.Summary.MAX }),
+                search.createColumn({ name: "custitem_style_headless", summary: search.Summary.MAX }),
+                search.createColumn({ name: "custitem_gender_headless", summary: search.Summary.MAX }),
                 search.createColumn({ name: "custitem_featured_item", summary: search.Summary.MAX }),
                 search.createColumn({ name: "custitem_customer_rating", summary: search.Summary.MAX })
             ]
@@ -113,12 +112,11 @@ define(['N/search'], function (search) {
 
                     // 🔥 NEW PROPERTIES
                     brand: result.getValue({ name: "custitem_brand", summary: search.Summary.MAX }) || "",
-                    storageCapacityGb: parseFloat(result.getValue({ name: "custitem_storage_capacity_gb", summary: search.Summary.MAX })) || 0,
-                    memoryRamGb: parseFloat(result.getValue({ name: "custitem_memory_ram_gb", summary: search.Summary.MAX })) || 0,
-                    screenSizeIn: parseFloat(result.getValue({ name: "custitem_screen_size_in", summary: search.Summary.MAX })) || 0,
-                    processorModel: result.getValue({ name: "custitem_processor_model", summary: search.Summary.MAX }) || "",
                     color: result.getValue({ name: "custitem_color_headless", summary: search.Summary.MAX }) || "",
-                    networkType: result.getValue({ name: "custitem_network_type", summary: search.Summary.MAX }) || "",
+                    size: result.getValue({ name: "custitem_size_headless", summary: search.Summary.MAX }) || "",
+                    material: result.getValue({ name: "custitem_material_headless", summary: search.Summary.MAX }) || "",
+                    style: result.getValue({ name: "custitem_style_headless", summary: search.Summary.MAX }) || "",
+                    gender: result.getValue({ name: "custitem_gender_headless", summary: search.Summary.MAX }) || "",
                     featured: result.getValue({ name: "custitem_featured_item", summary: search.Summary.MAX }),
                     customerRating: parseFloat(result.getValue({ name: "custitem_customer_rating", summary: search.Summary.MAX })) || 0
                 });

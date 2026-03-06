@@ -1,5 +1,6 @@
 using NetSuiteIntegrationAPI.Models;
 
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.Configure<NetSuiteOptions>(

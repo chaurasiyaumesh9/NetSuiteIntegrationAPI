@@ -183,14 +183,11 @@ public class TypesenseService
             // 🔥 NEW FIELDS
 
             new { name = "brand", type = "string", facet = true , optional = true},
-            new { name = "storageCapacity", type = "float", facet = true , optional = true},
-            new { name = "memoryRam", type = "float", facet = true , optional = true},
-            new { name = "screenSize", type = "float", facet = true , optional = true},
-
-            new { name = "processorModel", type = "string", infix = true , optional = true},
             new { name = "color", type = "string", facet = true , optional = true},
-            new { name = "networkType", type = "string", facet = true , optional = true},
-
+            new { name = "size", type = "string", facet = true , optional = true},
+            new { name = "material", type = "string", facet = true , optional = true},
+            new { name = "style", type = "string", facet = true , optional = true},
+            new { name = "gender", type = "string", facet = true , optional = true},
             new { name = "featured", type = "bool", facet = true, optional = true},
             new { name = "customerRating", type = "float", facet = true, optional = true }
             },
@@ -241,12 +238,11 @@ public class TypesenseService
                 // 🔥 THESE MUST EXIST
 
                 brand = product.Brand ?? "",
-                storageCapacity = product.StorageCapacity,
-                memoryRam = product.MemoryRam,
-                screenSize = product.ScreenSize,
-                processorModel = product.ProcessorModel ?? "",
                 color = product.Color ?? "",
-                networkType = product.NetworkType ?? "",
+                size = product.Size ?? "",
+                material = product.Material ?? "",
+                style = product.Style ?? "",
+                gender = product.Gender ?? "",
                 featured = product.Featured,
                 customerRating = product.CustomerRating
             };
@@ -365,7 +361,7 @@ public class TypesenseService
         "query_by=name,description,sku",
         $"page={page}",
         $"per_page={pageSize}",
-        "facet_by=categoryIds,brand,color,networkType,storageCapacity,memoryRam,screenSize,customerRating,featured",
+        "facet_by=categoryIds,brand,color,size,material,style,gender,customerRating,featured",
         "max_facet_values=20"
     };
 
