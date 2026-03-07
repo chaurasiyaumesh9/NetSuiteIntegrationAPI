@@ -28,12 +28,14 @@ builder.Services.AddScoped<TypesenseService>();
 
 builder.Services.AddCors(options =>
 {
-    options.AddPolicy("AngularLocal",
+            options.AddPolicy("AngularLocal",
         policy =>
         {
-            policy.WithOrigins("http://localhost:4200", "https://ng-mercurion-overseas.vercel.app/")
+            // Note: origin strings must not include a trailing slash
+            policy.WithOrigins("http://localhost:4200", "https://ng-mercurion-overseas.vercel.app")
                   .AllowAnyHeader()
-                  .AllowAnyMethod();
+                  .AllowAnyMethod()
+                  .AllowCredentials();
         });
 });
 
