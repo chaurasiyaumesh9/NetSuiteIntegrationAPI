@@ -31,7 +31,7 @@ builder.Services.AddCors(options =>
     options.AddPolicy("AngularLocal",
         policy =>
         {
-            policy.WithOrigins("http://localhost:4200", "https://netsuiteintegrationapi.onrender.com")
+            policy.WithOrigins("http://localhost:4200", "https://ng-mercurion-overseas.vercel.app/")
                   .AllowAnyHeader()
                   .AllowAnyMethod();
         });
