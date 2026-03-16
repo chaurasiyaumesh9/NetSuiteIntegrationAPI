@@ -32,7 +32,7 @@ builder.Services.AddCors(options =>
         policy =>
         {
             // Note: origin strings must not include a trailing slash
-            policy.WithOrigins("http://localhost:4200", "https://ng-mercurion-overseas.vercel.app")
+            policy.WithOrigins("http://localhost:4200", "https://ng-mercurion-overseas.vercel.app", "https://sca.primarysports.com")
                   .AllowAnyHeader()
                   .AllowAnyMethod()
                   .AllowCredentials();
